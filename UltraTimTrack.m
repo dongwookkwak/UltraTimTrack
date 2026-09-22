@@ -2016,7 +2016,9 @@ if isfield(handles,'ImStack')
     
     % prompt to optionally change processing based on computational time
     answer = 'Undefined';
-    if (est_duration > 60) && handles.do_parfor.Value == 0
+    if isfield(handles, 'noninteractive') && handles.noninteractive
+        answer = 'No';
+    elseif (est_duration > 60) && handles.do_parfor.Value == 0
         answer = questdlg(['Estimated TimTrack duration: ', num2str(est_duration), ' s, would you like to use parallel pool?'], 'Type of computation', 'Yes','No','Cancel','Yes');
     end
     
