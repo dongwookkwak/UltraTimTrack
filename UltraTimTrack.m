@@ -1994,6 +1994,9 @@ end
 numIterations = length(frames);
 
 parms = handles.parms;
+if handles.flipimage.Value && strcmp(parms.fas.houghangles, 'specified')
+    parms.fas.range = sort(180 - parms.fas.range);
+end
 parms.extrapolation = 1;
 
 n = handles.vidWidth;
@@ -2820,10 +2823,15 @@ function [handles] = Auto_Detect_Callback(hObject, eventdata, handles)
     
     % run TimTrack
     handles.parms.fas.redo_ROI = 1;
-    [geofeatures, ~, parms] = auto_ultrasound(data, handles.parms);
+    detection_parms = handles.parms;
+    if handles.flipimage.Value && strcmp(detection_parms.fas.houghangles, 'specified')
+        detection_parms.fas.range = sort(180 - detection_parms.fas.range);
+    end
+    [geofeatures, ~, parms] = auto_ultrasound(data, detection_parms);
     
     % save parms
     parms.fas.redo_ROI = 0;
+    parms.fas.range = handles.parms.fas.range;
     handles.parms = parms;
     
     % scale
