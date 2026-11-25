@@ -65,6 +65,31 @@ addpath(genpath(mainfoldername));
 load('TimTrack_parms.mat','parms')
 handles.parms = parms;
 
+% The selected muscle controls the fascicle angle range for flipped images.
+handles.flippedMuscle = 'Soleus';
+settingsPanel = get(handles.flipimage, 'Parent');
+settingsChildren = allchild(settingsPanel);
+for k = 1:numel(settingsChildren)
+    if isprop(settingsChildren(k), 'Position') && isprop(settingsChildren(k), 'Units')
+        oldUnits = get(settingsChildren(k), 'Units');
+        set(settingsChildren(k), 'Units', 'normalized');
+        pos = get(settingsChildren(k), 'Position');
+        pos(2) = 0.105 + 0.895 * pos(2);
+        pos(4) = 0.895 * pos(4);
+        set(settingsChildren(k), 'Position', pos, 'Units', oldUnits);
+    end
+end
+handles.muscleGroup = uibuttongroup('Parent', settingsPanel, 'Units', 'normalized', ...
+    'Position', [0.03 0.005 0.94 0.095], 'Title', 'Muscle', 'FontSize', 11);
+handles.muscleGastro = uicontrol(handles.muscleGroup, 'Style', 'radiobutton', ...
+    'Units', 'normalized', 'Position', [0.03 0.05 0.55 0.9], ...
+    'String', 'Gastrocnemius', 'Tag', 'Gastrocnemius', 'FontSize', 11);
+handles.muscleSoleus = uicontrol(handles.muscleGroup, 'Style', 'radiobutton', ...
+    'Units', 'normalized', 'Position', [0.60 0.05 0.37 0.9], ...
+    'String', 'Soleus', 'Tag', 'Soleus', 'FontSize', 11);
+set(handles.muscleGroup, 'SelectedObject', handles.muscleSoleus, ...
+    'SelectionChangedFcn', @select_flipped_muscle);
+
 handles.BlockSize = [21 71]; %initialize it
 % check to make sure there is a settings mat-file present, if not then make
 % one in the directory where the m-file sits.
@@ -623,6 +648,21 @@ function Settings_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+function select_flipped_muscle(hObject, event)
+handles = guidata(hObject);
+handles.flippedMuscle = get(event.NewValue, 'Tag');
+guidata(hObject, handles);
+
+function parms = apply_flipped_muscle_range(handles, parms)
+if handles.flipimage.Value
+    parms.fas.houghangles = 'specified';
+    if strcmp(handles.flippedMuscle, 'Gastrocnemius')
+        parms.fas.range = [5 85];
+    else
+        parms.fas.range = [120 175];
+    end
+end
 
 
 % --------------------------------------------------------------------
@@ -1993,10 +2033,7 @@ else
 end
 numIterations = length(frames);
 
-parms = handles.parms;
-if handles.flipimage.Value && strcmp(parms.fas.houghangles, 'specified')
-    parms.fas.range = sort(180 - parms.fas.range);
-end
+parms = apply_flipped_muscle_range(handles, handles.parms);
 parms.extrapolation = 1;
 
 n = handles.vidWidth;
@@ -2823,15 +2860,13 @@ function [handles] = Auto_Detect_Callback(hObject, eventdata, handles)
     
     % run TimTrack
     handles.parms.fas.redo_ROI = 1;
-    detection_parms = handles.parms;
-    if handles.flipimage.Value && strcmp(detection_parms.fas.houghangles, 'specified')
-        detection_parms.fas.range = sort(180 - detection_parms.fas.range);
-    end
+    detection_parms = apply_flipped_muscle_range(handles, handles.parms);
     [geofeatures, ~, parms] = auto_ultrasound(data, detection_parms);
     
     % save parms
     parms.fas.redo_ROI = 0;
     parms.fas.range = handles.parms.fas.range;
+    parms.fas.houghangles = handles.parms.fas.houghangles;
     handles.parms = parms;
     
     % scale
